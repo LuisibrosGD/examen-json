@@ -90,6 +90,7 @@ export default function App() {
   }, [themeMode]);
 
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const [isJsonPanelOpen, setIsJsonPanelOpen] = useState(false);
   const themeMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -657,6 +658,18 @@ export default function App() {
                 {currentExam.title}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsJsonPanelOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <span>
+                {isJsonPanelOpen
+                  ? 'Ocultar Código Fuente (JSON)'
+                  : 'Código Fuente del Examen (JSON)'}
+              </span>
+            </button>
           </div>
         </div>
       )}
@@ -695,9 +708,13 @@ export default function App() {
 
         {activeSection === 'exam-workspace' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div id="cuestionario" className="lg:col-span-7">
+            <div
+              id="cuestionario"
+              className={isJsonPanelOpen ? 'lg:col-span-7' : 'lg:col-span-12'}
+            >
               <InteractiveExamStage
                 exam={currentExam}
+                isCompactLayout={isJsonPanelOpen}
                 onUpdateExam={(updatedExam) => {
                   const formattedJson = serializeExamToStandardJson(updatedExam);
                   handleExamLoadedInWorkspace(updatedExam, formattedJson);
@@ -707,15 +724,16 @@ export default function App() {
               />
             </div>
 
-            <div id="importador-json" className="lg:col-span-5 lg:sticky lg:top-6">
-              <JsonInspectorPanel
-                currentExam={currentExam}
-                rawJsonText={rawJsonText}
-                onRawJsonChange={setRawJsonText}
-                onExamLoaded={handleExamLoadedInWorkspace}
-                onOpenPromptAssistant={() => setActiveSection('prompt-assistant')}
-              />
-            </div>
+            {isJsonPanelOpen && (
+              <div id="importador-json" className="lg:col-span-5 lg:sticky lg:top-6">
+                <JsonInspectorPanel
+                  currentExam={currentExam}
+                  rawJsonText={rawJsonText}
+                  onRawJsonChange={setRawJsonText}
+                  onExamLoaded={handleExamLoadedInWorkspace}
+                />
+              </div>
+            )}
           </div>
         )}
 

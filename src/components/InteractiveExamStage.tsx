@@ -19,6 +19,7 @@ import {
   Settings2,
   Plus,
   Minus,
+  ArrowDown,
 } from 'lucide-react';
 import { ExamSchema, ExamQuestion, ExamOption } from '../types/exam';
 import {
@@ -37,6 +38,7 @@ interface ToastNotification {
 
 interface InteractiveExamStageProps {
   exam: ExamSchema;
+  isCompactLayout?: boolean;
   onUpdateExam?: (updatedExam: ExamSchema) => void;
   onOpenReport: () => void;
   onFinishAttempt: (record: {
@@ -57,6 +59,7 @@ type QuestionFilter = 'all' | 'unanswered' | 'incorrect';
 
 export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   exam,
+  isCompactLayout = false,
   onUpdateExam,
   onOpenReport,
   onFinishAttempt,
@@ -85,6 +88,18 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   const warned15Ref = useRef(false);
   const warnedExpiredRef = useRef(false);
   const questionCardRefs = useRef<Record<string, HTMLElement | null>>({});
+  const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  const handleScrollToBottom = () => {
+    if (bottomAnchorRef.current) {
+      bottomAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } else {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const pushToast = (
     variant: ToastNotification['variant'],
@@ -656,7 +671,13 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
 
       {/* Exam Header Card */}
       <div className="bg-white border border-slate-200 rounded-xl p-6">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-slate-200">
+        <div
+          className={`flex flex-col ${
+            isCompactLayout
+              ? 'gap-4'
+              : 'md:flex-row md:items-start justify-between gap-4'
+          } pb-5 border-b border-slate-200`}
+        >
           <div className="space-y-1.5">
             {/* Clean unboxed metadata with typographic separators */}
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -714,7 +735,13 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
           </div>
 
           {/* Interactive Mode Switcher & Report Access */}
-          <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+          <div
+            className={`flex flex-col ${
+              isCompactLayout
+                ? 'items-start sm:flex-row sm:items-center sm:justify-between w-full pt-3 border-t border-slate-100'
+                : 'items-start md:items-end'
+            } gap-2.5 shrink-0`}
+          >
             <div className="flex flex-wrap items-center gap-2">
               {!browserNotificationsEnabled && (
                 <button
@@ -755,34 +782,46 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span>Ver reporte</span>
               </button>
+              <button
+                type="button"
+                onClick={handleScrollToBottom}
+                title="Ir hacia el final de la página"
+                aria-label="Ir hacia el final de la página"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <ArrowDown className="w-3.5 h-3.5 text-slate-700" />
+                <span>Ir al final</span>
+              </button>
             </div>
-            <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
-              <SlidersHorizontal className="w-3 h-3" />
-              Modo de validación de clave
-            </span>
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
-              <button
-                type="button"
-                onClick={() => setValidationMode('final')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  validationMode === 'final'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Al Finalizar Examen
-              </button>
-              <button
-                type="button"
-                onClick={() => setValidationMode('instant')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  validationMode === 'instant'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Validación Instantánea
-              </button>
+            <div className={`flex flex-col ${isCompactLayout ? 'items-start sm:items-end' : 'items-start md:items-end'} gap-1`}>
+              <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                <SlidersHorizontal className="w-3 h-3" />
+                Modo de validación de clave
+              </span>
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setValidationMode('final')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    validationMode === 'final'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Al Finalizar Examen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValidationMode('instant')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    validationMode === 'instant'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Validación Instantánea
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -895,7 +934,13 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
               : 'bg-amber-50/70 border-amber-200 text-amber-950'
           }`}
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div
+            className={`flex flex-col ${
+              isCompactLayout
+                ? 'gap-4'
+                : 'md:flex-row md:items-center justify-between gap-6'
+            }`}
+          >
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold tracking-wide">
                 <Award
@@ -941,7 +986,11 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div
+              className={`flex flex-wrap items-center gap-2.5 shrink-0 ${
+                isCompactLayout ? 'pt-3 border-t border-black/10' : ''
+              }`}
+            >
               <button
                 type="button"
                 onClick={() =>
@@ -1340,7 +1389,14 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
       )}
 
       {/* Bottom Action Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div
+        ref={bottomAnchorRef}
+        className={`bg-white border border-slate-200 rounded-xl p-5 flex ${
+          isCompactLayout
+            ? 'flex-col items-start gap-4'
+            : 'flex-col sm:flex-row items-center justify-between gap-4'
+        }`}
+      >
         <div className="text-xs text-slate-600">
           {isSubmitted ? (
             <span>
@@ -1354,7 +1410,7 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
           <button
             type="button"
             onClick={handleResetExam}
@@ -1378,6 +1434,17 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
       </div>
         </>
       )}
+
+      {/* Floating Scroll-to-Bottom Button inside Exam Section */}
+      <button
+        type="button"
+        onClick={handleScrollToBottom}
+        title="Ir hacia el final de la página"
+        aria-label="Ir hacia el final de la página"
+        className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-slate-900 hover:bg-sky-600 text-white shadow-lg border border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+      >
+        <ArrowDown className="w-5 h-5" />
+      </button>
 
       {/* PDF Live Preview Modal */}
       {pdfPreviewTarget && (

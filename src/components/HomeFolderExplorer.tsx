@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder,
   FolderPlus,
@@ -19,6 +19,7 @@ import {
   Download,
   HardDrive,
   RefreshCw,
+  MoreVertical,
 } from 'lucide-react';
 import { FolderNode, LibraryExamItem, ExamSchema } from '../types/exam';
 import { normalizeExamJson } from '../utils/examParser';
@@ -79,6 +80,16 @@ export const HomeFolderExplorer: React.FC<HomeFolderExplorerProps> = ({
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<FolderNode | null>(null);
+  const [examToDelete, setExamToDelete] = useState<LibraryExamItem | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setOpenMenuId(null);
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   const [isBackupDrawerOpen, setIsBackupDrawerOpen] = useState(false);
   const [pendingBackupPayload, setPendingBackupPayload] =
@@ -1000,17 +1011,41 @@ export const HomeFolderExplorer: React.FC<HomeFolderExplorerProps> = ({
                         <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 group-hover:bg-sky-600 group-hover:text-white transition-colors">
                           <Folder className="w-5 h-5" />
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFolderToDelete(folder);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
-                          title="Eliminar carpeta"
+
+                        <div
+                          className="relative"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenMenuId((prev) =>
+                                prev === `folder-${folder.id}` ? null : `folder-${folder.id}`
+                              )
+                            }
+                            className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Más opciones"
+                            aria-label="Opciones de carpeta"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {openMenuId === `folder-${folder.id}` && (
+                            <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg p-1 z-30">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  setFolderToDelete(folder);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer whitespace-nowrap"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                                <span>Eliminar</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div>
@@ -1096,18 +1131,50 @@ export const HomeFolderExplorer: React.FC<HomeFolderExplorerProps> = ({
                         <span className="font-mono tabular-nums">{item.exam.durationMinutes} min</span>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onDeleteExam(item.id)}
-                        className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors cursor-pointer shrink-0"
-                        title="Eliminar examen"
+                      <div
+                        className="relative shrink-0"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenMenuId((prev) =>
+                              prev === `exam-${item.id}` ? null : `exam-${item.id}`
+                            )
+                          }
+                          className="p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="Más opciones"
+                          aria-label="Opciones de examen"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {openMenuId === `exam-${item.id}` && (
+                          <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg p-1 z-30">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                setExamToDelete(item);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer whitespace-nowrap"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      {item.exam.title}
+                      <button
+                        type="button"
+                        onClick={() => onOpenExam(item)}
+                        className="text-left hover:text-sky-700 transition-colors cursor-pointer focus:outline-none focus:underline"
+                      >
+                        {item.exam.title}
+                      </button>
                     </h3>
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {item.exam.description}
@@ -1227,6 +1294,61 @@ export const HomeFolderExplorer: React.FC<HomeFolderExplorerProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Sí, eliminar carpeta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Deleting an Exam */}
+      {examToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-exam-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+          onClick={() => setExamToDelete(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white border border-slate-200 rounded-xl max-w-md w-full p-6 space-y-5 shadow-xl"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="space-y-1">
+                <h3
+                  id="modal-delete-exam-title"
+                  className="text-base font-bold text-slate-900"
+                >
+                  ¿Eliminar el examen «{examToDelete.exam.title}»?
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Estás por eliminar este cuestionario ({examToDelete.exam.questions.length}{' '}
+                  preguntas · {examToDelete.exam.subject}) de tu biblioteca. Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setExamToDelete(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteExam(examToDelete.id);
+                  setExamToDelete(null);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Sí, eliminar examen</span>
               </button>
             </div>
           </div>
