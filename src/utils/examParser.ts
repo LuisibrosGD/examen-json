@@ -30,6 +30,18 @@ export function areAnswerSetsEqual(selected: string[], correct: string[]): boole
   return normSelected.every((val, idx) => val === normCorrect[idx]);
 }
 
+export function shuffleExamQuestions(questions: ExamQuestion[]): ExamQuestion[] {
+  const copy = [...questions];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.map((q, index) => ({
+    ...q,
+    number: index + 1,
+  }));
+}
+
 function resolveSingleCorrectToken(
   token: string | number,
   options: ExamOption[]

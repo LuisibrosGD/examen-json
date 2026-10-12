@@ -20,11 +20,13 @@ import {
   Plus,
   Minus,
   ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 import { ExamSchema, ExamQuestion, ExamOption } from '../types/exam';
 import {
   getQuestionCorrectIds,
   areAnswerSetsEqual,
+  shuffleExamQuestions,
   OPTION_LETTERS,
 } from '../utils/examParser';
 import { PdfPreviewModal, PdfPreviewTarget } from './PdfPreviewModal';
@@ -74,9 +76,10 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   const [filter, setFilter] = useState<QuestionFilter>('all');
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(
-    exam.questions[0]?.id || null
+  const [orderedQuestions, setOrderedQuestions] = useState<ExamQuestion[]>(() =>
+    shuffleExamQuestions(exam.questions)
   );
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [questionTimesSeconds, setQuestionTimesSeconds] = useState<Record<string, number>>({});
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [pdfPreviewTarget, setPdfPreviewTarget] = useState<PdfPreviewTarget | null>(null);
@@ -99,6 +102,13 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
         behavior: 'smooth',
       });
     }
+  };
+
+  const handleScrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
   };
 
   const pushToast = (
@@ -163,8 +173,10 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   const remainingSeconds = Math.max(0, durationLimitSeconds - elapsedSeconds);
   const isLowTime = !isSubmitted && remainingSeconds <= 60 && remainingSeconds > 0;
 
-  // Reset state whenever a different exam ID is loaded
+  // Reset state and shuffle questions whenever a different exam ID is loaded
   useEffect(() => {
+    const shuffled = shuffleExamQuestions(exam.questions);
+    setOrderedQuestions(shuffled);
     setSelectedAnswers({});
     setEditingQuestionId(null);
     setRevealedQuestions({});
@@ -174,13 +186,27 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
     setFilter('all');
     setElapsedSeconds(0);
     setIsPaused(false);
-    setActiveQuestionId(exam.questions[0]?.id || null);
+    setActiveQuestionId(shuffled[0]?.id || null);
     setQuestionTimesSeconds({});
     setToasts([]);
     warned60Ref.current = false;
     warned15Ref.current = false;
     warnedExpiredRef.current = false;
   }, [exam.id]);
+
+  // Keep orderedQuestions updated if the user edits options/correct keys inline without losing the current random order
+  useEffect(() => {
+    setOrderedQuestions((prev) => {
+      if (prev.length !== exam.questions.length) {
+        return shuffleExamQuestions(exam.questions);
+      }
+      const byId = new Map(exam.questions.map((q) => [q.id, q]));
+      return prev.map((item, idx) => {
+        const updated = byId.get(item.id);
+        return updated ? { ...updated, number: idx + 1 } : item;
+      });
+    });
+  }, [exam.questions]);
 
   const totalQuestions = exam.questions.length;
   const answeredCount = exam.questions.filter(
@@ -318,6 +344,8 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   ]);
 
   const handleStartExam = () => {
+    const shuffled = shuffleExamQuestions(exam.questions);
+    setOrderedQuestions(shuffled);
     setSelectedAnswers({});
     setRevealedQuestions({});
     setIsSubmitted(false);
@@ -325,7 +353,7 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
     setFilter('all');
     setElapsedSeconds(0);
     setIsPaused(false);
-    setActiveQuestionId(exam.questions[0]?.id || null);
+    setActiveQuestionId(shuffled[0]?.id || null);
     setQuestionTimesSeconds({});
     setToasts([]);
     warned60Ref.current = false;
@@ -333,7 +361,7 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
     warnedExpiredRef.current = false;
     setIsStarted(true);
     setTimeout(() => {
-      const firstId = exam.questions[0]?.id;
+      const firstId = shuffled[0]?.id;
       if (firstId && questionCardRefs.current[firstId]) {
         questionCardRefs.current[firstId]?.focus({ preventScroll: true });
       }
@@ -508,6 +536,8 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
   };
 
   const handleResetExam = () => {
+    const shuffled = shuffleExamQuestions(exam.questions);
+    setOrderedQuestions(shuffled);
     setSelectedAnswers({});
     setRevealedQuestions({});
     setIsSubmitted(false);
@@ -515,7 +545,7 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
     setFilter('all');
     setElapsedSeconds(0);
     setIsPaused(false);
-    setActiveQuestionId(exam.questions[0]?.id || null);
+    setActiveQuestionId(shuffled[0]?.id || null);
     setQuestionTimesSeconds({});
     setToasts([]);
     warned60Ref.current = false;
@@ -530,7 +560,7 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
     return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
   };
 
-  const filteredQuestions = exam.questions.filter((q) => {
+  const filteredQuestions = orderedQuestions.filter((q) => {
     const userChoices = selectedAnswers[q.id] || [];
     if (filter === 'unanswered') {
       return userChoices.length === 0;
@@ -1413,6 +1443,17 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
           <button
             type="button"
+            onClick={handleScrollToTop}
+            title="Ir hacia arriba al inicio de la página"
+            aria-label="Ir hacia arriba"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <ArrowUp className="w-3.5 h-3.5" />
+            <span>Ir hacia arriba</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleResetExam}
             className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
@@ -1435,16 +1476,27 @@ export const InteractiveExamStage: React.FC<InteractiveExamStageProps> = ({
         </>
       )}
 
-      {/* Floating Scroll-to-Bottom Button inside Exam Section */}
-      <button
-        type="button"
-        onClick={handleScrollToBottom}
-        title="Ir hacia el final de la página"
-        aria-label="Ir hacia el final de la página"
-        className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-slate-900 hover:bg-sky-600 text-white shadow-lg border border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-      >
-        <ArrowDown className="w-5 h-5" />
-      </button>
+      {/* Floating Scroll-to-Top and Scroll-to-Bottom Buttons inside Exam Section */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={handleScrollToTop}
+          title="Ir hacia arriba"
+          aria-label="Ir hacia arriba"
+          className="w-11 h-11 rounded-full bg-white hover:bg-sky-50 text-slate-800 hover:text-sky-700 shadow-lg border border-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <ArrowUp className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleScrollToBottom}
+          title="Ir hacia el final de la página"
+          aria-label="Ir hacia el final de la página"
+          className="w-11 h-11 rounded-full bg-slate-900 hover:bg-sky-600 text-white shadow-lg border border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <ArrowDown className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* PDF Live Preview Modal */}
       {pdfPreviewTarget && (

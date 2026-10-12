@@ -302,17 +302,19 @@ export function buildAiPromptTemplate(
   const hasMultiCorrect = norm2 > 0 || norm3 > 0;
 
   const distributionInstruction = hasMultiCorrect
-    ? `DISTRIBUCIÓN OBLIGATORIA DE RESPUESTAS CORRECTAS Y ALTERNATIVAS:
+    ? `DISTRIBUCIÓN OBLIGATORIA Y ORDEN ALEATORIO DE PREGUNTAS Y RESPUESTAS:
 - Cada pregunta debe tener exactamente ${clampedOptionsCount} alternativas (${optionLetters.join(', ')}).
 - ${norm1}% de las preguntas (${count1} reactivos) con 1 sola respuesta correcta (ej. "respuestas_correctas": ["B"]).
 - ${norm2}% de las preguntas (${count2} reactivos) con 2 respuestas correctas (ej. "respuestas_correctas": ["A", "C"]).${
         norm3 > 0
           ? `\n- ${norm3}% de las preguntas (${count3} reactivos) con 3 o más respuestas correctas (ej. "respuestas_correctas": ["A", "B", "D"]).`
           : ''
-      }`
-    : `CONFIGURACIÓN DE ALTERNATIVAS Y RESPUESTAS:
+      }
+- ORDEN ALEATORIO OBLIGATORIO: Coloca las preguntas dentro del examen de manera completamente aleatoria (mezclando el orden de los subtemas y mezclando aleatoriamente la posición de las preguntas de 1 respuesta correcta con las de 2 o más respuestas correctas, sin agruparlas por bloques). Asimismo, distribuye aleatoriamente la posición de las letras correctas (${optionLetters.join(', ')}) en cada pregunta.`
+    : `CONFIGURACIÓN Y ORDEN ALEATORIO DE PREGUNTAS Y RESPUESTAS:
 - Cada pregunta debe tener exactamente ${clampedOptionsCount} alternativas (${optionLetters.join(', ')}).
-- 100% de las preguntas (${questionCount} reactivos) con 1 respuesta correcta.`;
+- 100% de las preguntas (${questionCount} reactivos) con 1 respuesta correcta.
+- ORDEN ALEATORIO OBLIGATORIO: Coloca las preguntas dentro del examen de manera completamente aleatoria (mezclando los subtemas o conceptos sin seguir el orden cronológico de los apuntes) y varía aleatoriamente la letra de la alternativa correcta (${optionLetters.join(', ')}) en cada reactivo.`;
 
   const secondQuestionExample = hasMultiCorrect
     ? `,
